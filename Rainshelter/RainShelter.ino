@@ -140,12 +140,16 @@ void Bacasensor(){
   hujan = digitalRead(Raindrop);
   nilai_soil = analogRead(Moisture);
   persen_soil = map(nilai_soil,batas_basah,batas_kering,100,0);
+  persen_soil = constrain(persen_soil, 0, 100);
   
   Serial.print("hujan : ");
   Serial.println(hujan);
   Serial.print("kelembaban : ");
-  Serial.println(persen_soil);
-  Serial.println(nilai_soil);
+  Serial.print(nilai_soil);
+  Serial.print(" / ");
+  Serial.print(persen_soil);
+  Serial.println("%");
+  
   if(persen_soil <=60){
     Serial.println("Kelembaban Rendah");
     ket = 0;
@@ -159,49 +163,44 @@ void Bacasensor(){
     ket = 2;
   }
 
-  event(hujan,persen_soil);
-  if(hujan != lastrain || abs(persen_soil - lastsoil) > 6){
+  if(hujan != lastrain || abs(persen_soil - lastsoil) > 4){
     action();
     lastrain = hujan;
     lastsoil = persen_soil;
   }
 }
-//event
-void event(int hujan, int persen_soil){
-  //hujan
-  if(hujan == 0){
-    if(persen_soil <= 60){
-      CurrentState = Shelter_OPEN;
-    }
-    else if(persen_soil > 60){
-      CurrentState = Shelter_CLOSE;
-    }
-  }
-  //tidak hujan
-  else{
-    if(persen_soil <= 60){
-      CurrentState = Shelter_CLOSE;
-    }
-    else if(persen_soil > 60){
-      CurrentState = Shelter_OPEN;
-    }
-  }
-}
+
 //Action
 void action(){
-  static State LastState = Shelter_OPEN;
-  if(CurrentState != LastState){
-    switch(CurrentState){
-      case Shelter_OPEN:
-      st = 0;
-      buka();
-      break;
-      case Shelter_CLOSE:
-      st = 1;
-      tutup();
-      break;
-    }
-    LastState = CurrentState;
+  switch(CurrentState){
+    case Shelter_OPEN:
+      if(hujan == 0 && persen_soil > 60){
+        st = 1;
+        Serial.println("Atap Tertutup");
+        tutup();
+        CurrentState = Shelter_CLOSE;
+      }
+      else if(hujan == 1 && persen_soil <= 60){
+        st = 1;
+        Serial.println("Atap Tertutup");
+        tutup();
+        CurrentState = Shelter_CLOSE;
+      }
+    break;
+    case Shelter_CLOSE:
+      if(hujan == 0 && persen_soil <= 60){
+        st = 0;
+        Serial.println("Atap Terbuka");
+        buka();
+        CurrentState = Shelter_OPEN;
+      }
+      else if(hujan == 1 && persen_soil > 60){
+        st = 0;
+        Serial.println("Atap Terbuka");
+        buka();
+        CurrentState = Shelter_OPEN;
+      }
+    break;
   }
 }
 void buka(){
